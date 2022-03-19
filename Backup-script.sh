@@ -21,8 +21,8 @@ cat << EOF
 # Data:		18-03-2022
 # Script:	Backup mega
 # Descricao:	Permite fazer de backup automatico para servidores Mega
-# Criado por:	Weverson Furtado
-# Twitter:	@weversonfurtado
+# Criado por:   Wh4xk69
+# IRC:          server:slackjeff.com.br nick:Wh4xk69
 #-----------------------------------------------------------------
 EOF
 
