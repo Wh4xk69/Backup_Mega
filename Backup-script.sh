@@ -3,8 +3,9 @@
 hoje=$(date +'%d-%m-%Y')
 name="Backup_$hoje.tar.bz2"
 path_1="/Root/Backup"
-path_cipher="${HOME}/.cipher"
-path_encipher="$HOME/.encipher"
+path_backup_old="${HOME}/.BACKUP"
+path_cipher="${HOME}/.BACKUP/cipher"
+path_encipher="$HOME/.BACKUP/encipher"
 
 
 # Entre com a pasta dos seus codigos
@@ -31,7 +32,8 @@ function check_path(){
 	fi
 	if [ -d $path_cipher ];then
 		echo "$(cor 32 0)A pasta $path_cipher ja existe!$(cor 0 1)"
-	else 
+	else
+		mkdir $path_backup_old
 		mkdir $path_cipher
 	fi
 	if [ -d $path_encipher ];then
@@ -39,7 +41,7 @@ function check_path(){
 	else
 		mkdir $path_encipher
 	fi
-	check_app
+	delete_arq_old
 }
 
 function cor(){
@@ -54,10 +56,10 @@ function msg(){
 		4) echo -e "$(cor 32 0)[4]----Processo de assinatura concluida...$(cor 0 1)";;
 		5) echo -e "$(cor 32 0)[5]----Preparando arquivos pra ser encriptados...$(cor 0 1)";;
 		6) echo -e "$(cor 32 0)[6]----Preparando para fazer upload...$(cor 0 1)";;
-		6.1) echo -e "$(cor 31 0)[!] Ja existe o arquivo $(cor 333 0)$arq$(cor 31 0) no servidor!$(cor 0 1)";;
+		6.1) echo -e "$(cor 31 0)[!] Ja existe o arquivo $(cor 33 0)$arq$(cor 31 0) no servidor!$(cor 0 1)";;
 		7) echo -e "$(cor 32 0)[7]----Iniciando o processo de limpeza...$(cor 0 1)";;
-		7.1) echo -e "$(cor 31 0)[X] $i - Arquivo $(cor 333 0)$(echo $file | sed 's/.*er\///')$(cor 31 0) foram deletados [!]$(cor 0 1)";;
-		7.2) echo -e "$(cor 31 0) [X] $i - Pasta $file estar vazia [!]$(cor 0 1)";;
+		7.1) echo -e "$(cor 31 0)[X] $i - Arquivo $(cor 33 0)$(echo $shred | sed 's/.*er\///')$(cor 31 0) foram deletados [!]$(cor 0 1)";;
+		7.2) echo -e "$(cor 31 0) [X] $i - Pasta $shred estar vazia [!]$(cor 0 1)";;
 		8) echo -e "$(cor 32 0)[9]----TODOS PROCESSOS CONCLUIDOS COM SUCESSO!";;
 	esac
 
@@ -68,14 +70,14 @@ function backup_mega(){
 # Processo de compactacao
 #-------------------------------------------
 	msg 1
-	tar -jcf  $path_backup/* | pv > $name
+	tar -jcf  $path_backup/* 2>/dev/null | pv > $name
 	mv $name $path_encipher/.
 	msg 2
 
-# Crinado Checksum dos arquivos que foram compactados
+# Criando Checksum dos arquivos que foram compactados
 #--------------------------------------------
 	for n in $(find $path_backup/* -type f -print);do sha256sum $n 2>/dev/null>>$name.asc;done
-	mv "$name.asc" $path_cipher.
+	mv "$name.asc" $path_cipher/.
 	msg 3
 
 # Processo de uma assinatura gpg na lista checksum {Obs.: Caso tenha chave RSA}
@@ -87,7 +89,7 @@ function backup_mega(){
 #--------------------------------------------
 	msg 5
 	gpg -c $path_encipher/$name 2>/dev/null
-	mv $path_encipher/*.gpg $path_cipher/.
+	mv "$path_encipher/$name.gpg" $path_cipher/.
 
 # Processo de upload os arquivos .gpg .sig .asc
 #--------------------------------------------
@@ -97,7 +99,7 @@ function backup_mega(){
 		then
 			msg 6.1
 		else
-			megaput $arq --path $path_1/
+			megaput $path_cipher/$arq --path $path_1/
 		fi
 	done
 
@@ -105,7 +107,7 @@ function backup_mega(){
 #--------------------------------------------
 	msg 7
 	i=0
-	for shred in $(find $HOME/BACKUP/ -type f -print);do
+	for shred in $(find $path_backup_old/ -type f -print);do
 		if [ -f $shred ];then
 			i=$[$i+1]
 			shred -uzn5 $shred
@@ -125,7 +127,7 @@ function check_app(){
 	if [ -x /usr/bin/megacopy ];then
 		if [ -x /usr/bin/pv ];then
 			if [ -x /usr/bin/gpg ];then
-				megarc
+				check_path
 			else
 				sudo apt install -y gnupg
 				check_app
@@ -165,24 +167,24 @@ function delete_arq_old(){
 
 function megarc(){
 	if [ -e "${HOME}/.megarc" ]; then
-		delete_arq_old
+		check_app
 	else
 		if [ -z $username ];then
 			printf "\e[32;1mDigite o nome de usuario:> \e[m"
                         read username
-                        echo -e "[Login]\n\nUsername=$username" > .megarc
+                        echo -e "[Login]\n\nUsername=$username" > ${HOME}/.megarc
 		else
-			echo -e "[Login]\n\nUsername=$username" > .megarc
+			echo -e "[Login]\n\nUsername=$username" > ${HOME}/.megarc
 		fi
 		if [ -z $password ]; then
 			printf "\e[32;1mDigite a sua senha:> \e[m"
 			read -s password
-			echo -e "Password=$password" >> .megarc
+			echo -e "Password=$password" >> ${HOME}/.megarc
 		else
-			echo -e "Password=$password" >> .megarc
+			echo -e "Password=$password" >> ${HOME}/.megarc
 		fi
-		delete_arq_old
+		check_app
 	fi
 }
 
-check_path
+megarc

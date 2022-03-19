@@ -1,0 +1,1 @@
+Esse script foi criado com intuito de maximizar o tempo que desenvolvedor ter pra fazer backup de suas repositorios, por tanto, foi criando pra alivia aquela carga de trabalho pra subir todos teus dados
