@@ -1,18 +1,14 @@
 #!/usr/bin/bash
 
 hoje=$(date +'%d-%m-%Y')
-green="\033[1;32m"
-nor="\033[m"
-red="\033[1;31m"
-yellou="\033[1;33m"
 name="Backup_$hoje.tar.bz2"
 path_1="/Root/Backup"
-path_cipher='$HOME/BACKUP/.CIPHER'
-path_encipher='$HOME/BACKUP/.ENCIPHER'
+path_cipher="${HOME}/BACKUP/.CIPHER"
+path_encipher="$HOME/BACKUP/.ENCIPHER"
 
 
 # Entre com a pasta dos seus codigos
-path_backup=''
+path_backup="$home"
 
 # Entre com suas crediciais server MEGA
 username=''
@@ -29,63 +25,84 @@ cat << EOF
 #-----------------------------------------------------------------
 EOF
 
-function check_path()
-{
+function check_path(){
 	if [ -z $(megals $path_1) ];then
 		megamkdir $path_1
 	fi
-	[ -d $path_cipher ] || mkdir $path_cipher
-	[ -d $path_encipher ] || mkdir $path_encipher
+	[ -d $path_cipher ] || mkdir "${HOME}/BACKUP" & mkdir $path_cipher
+	[ -d $path_encipher ] || mkdir "${HOME}/BACKUP" & mkdir $path_encipher
 	check_app
 }
 
+function cor(){
+	[[ "$2" -eq 0 ]] && echo -e "\e[${1};1m" || echo -e "\e[m"
+}
 
-function backup_mega()
-{
-	echo -e "$green[1]------Processo de Backup iniciado...$nor"
+function msg(){
+	case $1 in
+		1) echo -e "$(cor 32 0)[1]----Processo de Backup iniciado...$(cor 0 1)";;
+		2) echo -e "$(cor 32 0)[2]----Processo de Backup concluido...$(cor 0 1)";;
+		3) echo -e "$(cor 32 0)[3]----Processo de Checksum concluido...$(cor 0 1)";;
+		4) echo -e "$(cor 32 0)[4]----Processo de assinatura concluida...$(cor 0 1)";;
+		5) echo -e "$(cor 32 0)[5]----Preparando arquivos pra ser encriptados...$(cor 0 1)";;
+		6) echo -e "$(cor 32 0)[6]----Preparando para fazer upload...$(cor 0 1)";;
+		6.1) echo -e "$(cor 31 0)[!] Ja existe o arquivo $(cor 333 0)$arq$(cor 31 0) no servidor!$(cor 0 1)";;
+		7) echo -e "$(cor 32 0)[7]----Iniciando o processo de limpeza...$(cor 0 1)";;
+		7.1) echo -e "$(cor 31 0)[X] $i - Arquivo $(cor 333 0)$(echo $file | sed 's/.*er\///')$(cor 31 0) foram deletados [!]$(cor 0 1)";;
+		7.2) echo -e "$(cor 31 0) [X] $i - Pasta $file estar vazia [!]$(cor 0 1)";;
+		8) echo -e "$(cor 32 0)[9]----TODOS PROCESSOS CONCLUIDOS COM SUCESSO!";;
+	esac
+
+}
+
+
+function backup_mega(){
+	msg 1
 	tar -jcf - $path_backup | pv > $name
 	mv $name $path_encipher/.
-	echo -e "$green[2]------Processo de Backup concluido...$nor"
+	msg 2
+#	--------------------------------------------
 	for n in $(find $path_backup -type f -print);do sha256sum $n 2>/dev/null>>$name.asc;done
 	mv *.asc $path_cipher.
-	echo -e "$green[3]------Processo de Checksum concluido...$nor"
+	msg 3
+#	--------------------------------------------
 	gpg -b $path_cipher/*.asc
-	echo -e "$green[4]------Processo de assinatura concluida...$nor"
-	echo -e "$green[5]------Preparando arquivos pra ser encriptados...$nor"
+	msg 4
+	msg 5
+#	--------------------------------------------
 	gpg -c $path_encipher/$name 2>/dev/null
 	mv $path_encipher/*.gpg $path_cipher/.
-	echo -e "$green[6]------Preparando para fazer upload...$nor"
+	msg 6
+#	--------------------------------------------
 	for arq in $(ls $path_cipher/* | sed 's/.*er\///')
 	do
 		if megals $path_1 | grep '\.' | sed 's/.*os\///' | grep -q $arq
 		then
-			echo -e "$red[!] Ja existe o arquivo $yellou$arq$red no servidor!$nor"
+		msg 6.1
 		else
 			megaput $path_cipher/$arq --path $path_1/
 		fi
 	done
-	echo -e "$green[7]------Iniciando o processo de limpeza...$nor"
+	msg 7
+#	--------------------------------------------
 	i=0
 	for file in $(find $HOME/BACKUP/ -type f -print);do
 		if [ -f $file ];then
 			i=$[$i+1]
 			shred -uzn5 $file
-			echo -e "$red[X] $i - Arquivo $yellou$(echo $file | sed 's/.*er\///')$red foram deletados [!]$nor"
+			msg 7.1
 		else
 			i=$[$i+1]
-			echo -e "$red [X] $i - Pasta $file estar vazia [!]$nor"
+			msg 7.2
 		fi
 	done
-	echo -e "$green[8]------Todos os backup foram salvos!!!$nor"
-	echo -e "$green[9]------TODOS PROCESSOS CONCLUIDOS COM SUCESSO!"
-
+	msg 8
 }
 
 # Essa funcao vai check no sistema possuem os
 # programas Megatools e PV se estao instalados.
 
-function check_app()
-{
+function check_app(){
 	if [ -x /usr/bin/megacopy ];then
 		if [ -x /usr/bin/pv ];then
 			megarc
@@ -104,8 +121,7 @@ function check_app()
 # Verifique antes de fazer Backup, assim vai consisti
 # somente dois backup antes de fazer o backup atual.
 
-function delete_arq_old()
-{
+function delete_arq_old(){
 	var1=$(megals $path_1 | sort | grep $(date +'%m') | wc -l)
 	if [ $var1 -gt 6 ];then
 
@@ -123,8 +139,7 @@ function delete_arq_old()
 # Verificacao de conta de usuario dos servidores mega
 # e caso criando um arquivo megarc pra login rapido.
 
-function megarc()
-{
+function megarc(){
 	if [ -e "${HOME}/.megarc" ]; then
 		delete_arq_old
 	else
