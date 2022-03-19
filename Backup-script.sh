@@ -7,8 +7,12 @@ red="\033[1;31m"
 yellou="\033[1;33m"
 name="Backup_$hoje.tar.bz2"
 path_1="/Root/Backup"
-path_cipher='$HOME/BACKUP/CIPHER'
-path_encipher='$HOME/BACKUP/ENCIPHER'
+path_cipher='$HOME/BACKUP/.CIPHER'
+path_encipher='$HOME/BACKUP/.ENCIPHER'
+
+
+# Entre com a pasta dos seus codigos
+path_backup=''
 
 # Entre com suas crediciais server MEGA
 username=''
@@ -39,22 +43,15 @@ function check_path()
 function backup_mega()
 {
 	echo -e "$green[1]------Processo de Backup iniciado...$nor"
-	tar -jcf - * .* | pv > $name
+	tar -jcf - $path_backup | pv > $name
 	mv $name $path_encipher/.
-	sleep 2
 	echo -e "$green[2]------Processo de Backup concluido...$nor"
-	sleep 1
-	for n in $(find . -type f -print);do sha256sum $n 2>/dev/null>>$name.asc;done
+	for n in $(find $path_backup -type f -print);do sha256sum $n 2>/dev/null>>$name.asc;done
 	mv *.asc $path_cipher.
-	sleep 2
 	echo -e "$green[3]------Processo de Checksum concluido...$nor"
-	sleep 1
 	gpg -b $path_cipher/*.asc
-	sleep 2
 	echo -e "$green[4]------Processo de assinatura concluida...$nor"
-	sleep 1
 	echo -e "$green[5]------Preparando arquivos pra ser encriptados...$nor"
-	sleep 2
 	gpg -c $path_encipher/$name 2>/dev/null
 	mv $path_encipher/*.gpg $path_cipher/.
 	echo -e "$green[6]------Preparando para fazer upload...$nor"
@@ -67,9 +64,7 @@ function backup_mega()
 			megaput $path_cipher/$arq --path $path_1/
 		fi
 	done
-	sleep 3
 	echo -e "$green[7]------Iniciando o processo de limpeza...$nor"
-	sleep 2
 	i=0
 	for file in $(find $HOME/BACKUP/ -type f -print);do
 		if [ -f $file ];then
@@ -81,34 +76,35 @@ function backup_mega()
 			echo -e "$red [X] $i - Pasta $file estar vazia [!]$nor"
 		fi
 	done
-	sleep 2
 	echo -e "$green[8]------Todos os backup foram salvos!!!$nor"
-	sleep 1
 	echo -e "$green[9]------TODOS PROCESSOS CONCLUIDOS COM SUCESSO!"
-	sleep 3
+
 }
 
-# Essa funcao vai check no sistema possuem os programas Megatools e PV se estao instalados.
+# Essa funcao vai check no sistema possuem os
+# programas Megatools e PV se estao instalados.
 
 function check_app()
 {
-	if [ -x /usr/bin/megacopy ]; then
-		if [ -x /usr/bin/pv ]; then
+	if [ -x /usr/bin/megacopy ];then
+		if [ -x /usr/bin/pv ];then
 			megarc
 		else
 			sudo apt install -y pv
 			check_app
 		fi
 	else
-		sudo apt install -y megatools
+	       	sudo apt install -y megatools
 		check_app
 	fi
 }
 
-# Funcao vai apagar a partir de 2 backup mais antigos assim ficando somente os os dois mais recente.
-# Verifique antes de fazer Backup, assim vai consistir somente dois backup antes de fazer o backup atual.
+# Funcao vai apagar a partir de 2 backup mais antigos
+# assim ficando somente os os dois mais recente.
+# Verifique antes de fazer Backup, assim vai consisti
+# somente dois backup antes de fazer o backup atual.
 
-function delete_arq_antigo()
+function delete_arq_old()
 {
 	var1=$(megals $path_1 | sort | grep $(date +'%m') | wc -l)
 	if [ $var1 -gt 6 ];then
@@ -124,12 +120,13 @@ function delete_arq_antigo()
 	fi
 }
 
-# Verificacao de conta de usuario dos servidores mega e criando
-# um arquivo megarc pra login rapido.
+# Verificacao de conta de usuario dos servidores mega
+# e caso criando um arquivo megarc pra login rapido.
+
 function megarc()
 {
 	if [ -e "${HOME}/.megarc" ]; then
-		delete_arq_antigo
+		delete_arq_old
 	else
 		if [ -z $username ];then
 			printf "\e[32;1mDigite o nome de usuario:> \e[m"
@@ -145,6 +142,7 @@ function megarc()
 		else
 			echo -e "Password=$password" >> .megarc
 		fi
+		delete_arq_old
 	fi
 }
 
