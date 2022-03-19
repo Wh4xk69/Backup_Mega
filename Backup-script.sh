@@ -3,12 +3,12 @@
 hoje=$(date +'%d-%m-%Y')
 name="Backup_$hoje.tar.bz2"
 path_1="/Root/Backup"
-path_cipher="${HOME}/BACKUP/.CIPHER"
-path_encipher="$HOME/BACKUP/.ENCIPHER"
+path_cipher="${HOME}/.cipher"
+path_encipher="$HOME/.encipher"
 
 
 # Entre com a pasta dos seus codigos
-path_backup="$home"
+path_backup="${HOME}"
 
 # Entre com suas crediciais server MEGA
 username=''
@@ -26,11 +26,19 @@ cat << EOF
 EOF
 
 function check_path(){
-	if [ -z $(megals $path_1) ];then
+	if [ -z $(megals $path_1 | head -n 1) ];then
 		megamkdir $path_1
 	fi
-	[ -d $path_cipher ] || mkdir "${HOME}/BACKUP" & mkdir $path_cipher
-	[ -d $path_encipher ] || mkdir "${HOME}/BACKUP" & mkdir $path_encipher
+	if [ -d $path_cipher ];then
+		echo "$(cor 32 0)A pasta $path_cipher ja existe!$(cor 0 1)"
+	else 
+		mkdir $path_cipher
+	fi
+	if [ -d $path_encipher ];then
+		echo "$(cor 32 0)A pasta $path_encipher ja existe!$(cor 0 1)"
+	else
+		mkdir $path_encipher
+	fi
 	check_app
 }
 
@@ -57,39 +65,50 @@ function msg(){
 
 
 function backup_mega(){
+# Processo de compactacao
+#-------------------------------------------
 	msg 1
-	tar -jcf - $path_backup | pv > $name
+	tar -jcf  $path_backup/* | pv > $name
 	mv $name $path_encipher/.
 	msg 2
-#	--------------------------------------------
-	for n in $(find $path_backup -type f -print);do sha256sum $n 2>/dev/null>>$name.asc;done
-	mv *.asc $path_cipher.
+
+# Crinado Checksum dos arquivos que foram compactados
+#--------------------------------------------
+	for n in $(find $path_backup/* -type f -print);do sha256sum $n 2>/dev/null>>$name.asc;done
+	mv "$name.asc" $path_cipher.
 	msg 3
-#	--------------------------------------------
-	gpg -b $path_cipher/*.asc
-	msg 4
+
+# Processo de uma assinatura gpg na lista checksum {Obs.: Caso tenha chave RSA}
+#--------------------------------------------
+#	gpg -b $path_cipher/*.asc
+#	msg 4
+#
+# Processo de encriptacao simetricas
+#--------------------------------------------
 	msg 5
-#	--------------------------------------------
 	gpg -c $path_encipher/$name 2>/dev/null
 	mv $path_encipher/*.gpg $path_cipher/.
+
+# Processo de upload os arquivos .gpg .sig .asc
+#--------------------------------------------
 	msg 6
-#	--------------------------------------------
-	for arq in $(ls $path_cipher/* | sed 's/.*er\///')
-	do
-		if megals $path_1 | grep '\.' | sed 's/.*os\///' | grep -q $arq
+	for arq in $(ls $path_cipher/* | sed 's/.*er\///');do
+		if megals $path_1 | grep '\.' | sed 's/.*er\///' | grep -q $arq
 		then
-		msg 6.1
+			msg 6.1
 		else
-			megaput $path_cipher/$arq --path $path_1/
+			megaput $arq --path $path_1/
 		fi
 	done
+
+# Processo de delete os arquivos das pastas encipher e cipher
+#--------------------------------------------
 	msg 7
-#	--------------------------------------------
 	i=0
-	for file in $(find $HOME/BACKUP/ -type f -print);do
-		if [ -f $file ];then
+	for shred in $(find $HOME/BACKUP/ -type f -print);do
+		if [ -f $shred ];then
 			i=$[$i+1]
-			shred -uzn5 $file
+			shred -uzn5 $shred
 			msg 7.1
 		else
 			i=$[$i+1]
@@ -105,7 +124,12 @@ function backup_mega(){
 function check_app(){
 	if [ -x /usr/bin/megacopy ];then
 		if [ -x /usr/bin/pv ];then
-			megarc
+			if [ -x /usr/bin/gpg ];then
+				megarc
+			else
+				sudo apt install -y gnupg
+				check_app
+			fi
 		else
 			sudo apt install -y pv
 			check_app
