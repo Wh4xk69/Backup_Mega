@@ -6,59 +6,72 @@ nor="\033[m"
 red="\033[1;31m"
 yellou="\033[1;33m"
 name="Backup_$hoje.tar.bz2"
+path_1="/Root/Backup"
+path_cipher='$HOME/BACKUP/CIPHER'
+path_encipher='$HOME/BACKUP/ENCIPHER'
 
 # Entre com suas crediciais server MEGA
-username='123'
-password='hdhdhd'
+username=''
+password=''
 
 cat << EOF
 #!/bin/bash
 #-----------------------------------------------------------------
 # Data:		18-03-2022
 # Script:	Backup mega
-# Descricao:	Permite fazer de backup automati para servidores Mega
+# Descricao:	Permite fazer de backup automatico para servidores Mega
 # Criado por:	Weverson Furtado
 # Twitter:	@weversonfurtado
 #-----------------------------------------------------------------
 EOF
+
+function check_path()
+{
+	if [ -z $(megals $path_1) ];then
+		megamkdir $path_1
+	fi
+	[ -d $path_cipher ] || mkdir $path_cipher
+	[ -d $path_encipher ] || mkdir $path_encipher
+	check_app
+}
 
 
 function backup_mega()
 {
 	echo -e "$green[1]------Processo de Backup iniciado...$nor"
 	tar -jcf - * .* | pv > $name
-	mv $name /storage/internal/encipher/.
+	mv $name $path_encipher/.
 	sleep 2
 	echo -e "$green[2]------Processo de Backup concluido...$nor"
 	sleep 1
 	for n in $(find . -type f -print);do sha256sum $n 2>/dev/null>>$name.asc;done
-	mv *.asc /storage/internal/cipher/.
+	mv *.asc $path_cipher.
 	sleep 2
 	echo -e "$green[3]------Processo de Checksum concluido...$nor"
 	sleep 1
-	gpg -b /storage/internal/cipher/*.asc
+	gpg -b $path_cipher/*.asc
 	sleep 2
 	echo -e "$green[4]------Processo de assinatura concluida...$nor"
 	sleep 1
 	echo -e "$green[5]------Preparando arquivos pra ser encriptados...$nor"
 	sleep 2
-	gpg -c /storage/internal/encipher/$name 2>/dev/null
-	mv /storage/internal/encipher/*.gpg /storage/internal/cipher/.
+	gpg -c $path_encipher/$name 2>/dev/null
+	mv $path_encipher/*.gpg $path_cipher/.
 	echo -e "$green[6]------Preparando para fazer upload...$nor"
-	for arq in $(ls /storage/internal/cipher/* | sed 's/.*er\///')
+	for arq in $(ls $path_cipher/* | sed 's/.*er\///')
 	do
-		if megals /Root/Codigos/ | grep '\.' | sed 's/.*os\///' | grep -q $arq
+		if megals $path_1 | grep '\.' | sed 's/.*os\///' | grep -q $arq
 		then
 			echo -e "$red[!] Ja existe o arquivo $yellou$arq$red no servidor!$nor"
 		else
-			megaput /storage/internal/cipher/$arq --path /Root/Codigos/
+			megaput $path_cipher/$arq --path $path_1/
 		fi
 	done
 	sleep 3
 	echo -e "$green[7]------Iniciando o processo de limpeza...$nor"
 	sleep 2
 	i=0
-	for file in $(find /storage/internal/ -type f -print);do
+	for file in $(find $HOME/BACKUP/ -type f -print);do
 		if [ -f $file ];then
 			i=$[$i+1]
 			shred -uzn5 $file
@@ -97,10 +110,10 @@ function check_app()
 
 function delete_arq_antigo()
 {
-	var1=$(megals /Root/Codigos/ | sort | grep $(date +'%m') | wc -l)
+	var1=$(megals $path_1 | sort | grep $(date +'%m') | wc -l)
 	if [ $var1 -gt 6 ];then
 
-		for del in $(megals /Root/Codigos/ | sort |grep $(date +'%m') |  head -n -6)
+		for del in $(megals $path_1 | sort |grep $(date +'%m') |  head -n -6)
 		do
 			megarm $del
 			backup_mega
@@ -135,4 +148,4 @@ function megarc()
 	fi
 }
 
-check_app
+check_path
