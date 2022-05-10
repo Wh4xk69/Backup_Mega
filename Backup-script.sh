@@ -124,9 +124,12 @@ function backup_mega(){
 # programas Megatools e PV se estao instalados.
 
 function check_app(){
-	if [ -x /usr/bin/megacopy ];then
-		if [ -x /usr/bin/pv ];then
-			if [ -x /usr/bin/gpg ];then
+	local which_megacopy=$(which megacopy) 
+	local which_pv=$(which pv) 
+	local which_gpg=$(which gpg) 
+	if [ -x $which_megacopy ];then
+		if [ -x $which_pv ];then
+			if [ -x $which_gpg ];then
 				check_path
 			else
 				sudo apt install -y gnupg
