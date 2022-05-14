@@ -15,8 +15,9 @@ path_backup="${HOME}"
 username=''
 password=''
 
+function Logo()
+{
 cat << EOF
-#!/bin/bash
 #-----------------------------------------------------------------
 # Data:		18-03-2022
 # Script:	Backup mega
@@ -25,6 +26,7 @@ cat << EOF
 # IRC:          server:slackjeff.com.br nick:Wh4xk69
 #-----------------------------------------------------------------
 EOF
+}
 
 function check_path(){
 	if [ -z $(megals $path_1 | head -n 1) ];then
@@ -190,4 +192,5 @@ function megarc(){
 	fi
 }
 
+logo
 megarc
